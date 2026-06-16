@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Farmer Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .language-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .language-selector select {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .language-selector select option {
+            color: #333;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .message.bot .message-content {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.user .message-content {
+            background: #4CAF50;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin: 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+        }
+
+        .message.bot .message-avatar {
+            background: #2196F3;
+        }
+
+        .message.user .message-avatar {
+            background: #4CAF50;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group {
+            flex: 1;
+            position: relative;
+        }
+
+        .chat-input input {
+            width: 100%;
+            padding: 12px 50px 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input input:focus {
+            border-color: #4CAF50;
+        }
+
+        .voice-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4CAF50;
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+
+        .voice-button:hover {
+            background: #45a049;
+        }
+
+        .voice-button.recording {
+            background: #f44336;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.1); }
+            100% { transform: translateY(-50%) scale(1); }
+        }
+
+        .send-button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+
+        .send-button:hover {
+            background: #45a049;
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: #e3f2fd;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            color: #1976d2;
+            max-width: 70%;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots::after {
+            content: '...';
+            animation: typing 1.5s infinite;
+        }
+
+        @keyframes typing {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .quick-actions {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .quick-actions h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .quick-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-button {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #1976d2;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-button:hover {
+            background: #bbdefb;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                width: 95%;
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="language-selector">
+                <select id="languageSelect">
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी</option>
+                    <option value="bn">বাংলা</option>
+                    <option value="te">తెలుగు</option>
+                    <option value="mr">मराठी</option>
+                    <option value="ta">தமிழ்</option>
+                    <option value="gu">ગુજરાતી</option>
+                    <option value="kn">ಕನ್ನಡ</option>
+                    <option value="ml">മലയാളം</option>
+                    <option value="pa">ਪੰਜਾਬੀ</option>
+                    <option value="or">ଓଡ଼ିଆ</option>
+                    <option value="as">অসমীয়া</option>
+                </select>
+            </div>
+            <h1><i class="fas fa-seedling"></i> AI Farmer Assistant</h1>
+            <p>Your multilingual farming companion</p>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    Namaste! I'm your AI farming assistant. I can help you with crop information, weather advice, soil management, and farming techniques. Ask me anything about farming in your preferred language!
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h4>Quick Questions:</h4>
+            <div class="quick-buttons">
+                <button class="quick-button" onclick="askQuestion('Tell me about rice cultivation')">Rice Cultivation</button>
+                <button class="quick-button" onclick="askQuestion('What is the best season for wheat?')">Wheat Season</button>
+                <button class="quick-button" onclick="askQuestion('How to improve soil quality?')">Soil Quality</button>
+                <button class="quick-button" onclick="askQuestion('Weather advice for farming')">Weather Advice</button>
+                <button class="quick-button" onclick="askQuestion('Pest control methods')">Pest Control</button>
+            </div>
+        </div>
+
+        <div class="chat-input">
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Ask about farming..." onkeypress="handleKeyPress(event)">
+                <button class="voice-button" id="voiceButton" onclick="toggleVoiceRecording()">
+                    <i class="fas fa-microphone"></i>
+                </button>
+            </div>
+            <button class="send-button" id="sendButton" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isRecording = false;
+        let recognition = null;
+        let currentLanguage = 'en';
+
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                sendMessage();
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                stopRecording();
+            };
+
+            recognition.onend = function() {
+                stopRecording();
+            };
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Send to backend
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    language: currentLanguage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideTypingIndicator();
+                if (data.error) {
+                    addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                } else {
+                    addMessage(data.response, 'bot');
+                    // Speak the response
+                    speakText(data.response);
+                }
+            })
+            .catch(error => {
+                hideTypingIndicator();
+                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                console.error('Error:', error);
+            });
+        }
+
+        function addMessage(text, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = sender === 'bot' ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatMessages = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator show';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = '<div class="typing-dots"></div>';
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = '<i class="fas fa-robot"></i>';
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(typingDiv);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.parentElement.remove();
+            }
+        }
+
+        function toggleVoiceRecording() {
+            if (!recognition) {
+                alert('Speech recognition not supported in this browser');
+                return;
+            }
+
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            isRecording = true;
+            const voiceButton = document.getElementById('voiceButton');
+            voiceButton.classList.add('recording');
+            voiceButton.innerHTML = '<i class="fas fa-stop"></i>';
+            
+            // Set language for recognition
+            const langMap = {
+                'en': 'en-US',
+                'hi': 'hi-IN',
+                'bn': 'bn-IN',
+                'te': 'te-IN',
+                'mr': 'mr-IN',
+                'ta': 'ta-IN',
+                'gu': 'gu-IN',
+                'kn': 'kn-IN',
+                'ml': 'ml-IN',
+                'pa': 'pa-IN',
+                'or': 'or-IN',
+                'as': 'as-IN'
+            };
+            
+            recognition.lang = langMap[currentLanguage] || 'en-US';
+            recognition.start();
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            const voiceButton = document.getElementById('voiceButton');
+            voiceButton.classList.remove('recording');
+            voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
+            
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Set language for speech
+                const langMap = {
+                    'en': 'en-US',
+                    'hi': 'hi-IN',
+                    'bn': 'bn-IN',
+                    'te': 'te-IN',
+                    'mr': 'mr-IN',
+                    'ta': 'ta-IN',
+                    'gu': 'gu-IN',
+                    'kn': 'kn-IN',
+                    'ml': 'ml-IN',
+                    'pa': 'pa-IN',
+                    'or': 'or-IN',
+                    'as': 'as-IN'
+                };
+                
+                utterance.lang = langMap[currentLanguage] || 'en-US';
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function askQuestion(question) {
+            document.getElementById('messageInput').value = question;
+            sendMessage();
+        }
+
+        // Language change handler
+        document.getElementById('languageSelect').addEventListener('change', function() {
+            currentLanguage = this.value;
+        });
+
+        // Welcome message in selected language
+        const welcomeMessages = {
+            'en': 'Namaste! I\'m your AI farming assistant. I can help you with crop information, weather advice, soil management, and farming techniques. Ask me anything about farming in your preferred language!',
+            'hi': 'नमस्ते! मैं आपका AI कृषि सहायक हूं। मैं आपकी फसल की जानकारी, मौसम की सलाह, मिट्टी प्रबंधन और कृषि तकनीकों में मदद कर सकता हूं।',
+            'bn': 'নমস্কার! আমি আপনার AI কৃষি সহায়ক। আমি ফসলের তথ্য, আবহাওয়ার পরামর্শ, মাটি ব্যবস্থাপনা এবং কৃষি কৌশলে আপনাকে সাহায্য করতে পারি।',
+            'te': 'నమస్కారం! నేను మీ AI వ్యవసాయ సహాయకుడిని. నేను పంట సమాచారం, వాతావరణ సలహాలు, నేల నిర్వహణ మరియు వ్యవసాయ పద్ధతులలో మీకు సహాయపడగలను।'
+        };
+
+        // Update welcome message when language changes
+        document.getElementById('languageSelect').addEventListener('change', function() {
+            const welcomeMsg = welcomeMessages[this.value] || welcomeMessages['en'];
+            const firstBotMessage = document.querySelector('.message.bot .message-content');
+            if (firstBotMessage) {
+                firstBotMessage.textContent = welcomeMsg;
+            }
+        });
+    </script>
+</body>
+</html>
